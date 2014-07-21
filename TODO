@@ -1,0 +1,5 @@
+- reorganiser scripts
+- utiliser constantes
+- partitionnement tweet_flat
+- boostrap spark
+- utilisation variables input / output / libs
