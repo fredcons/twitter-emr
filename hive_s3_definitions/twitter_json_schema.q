@@ -279,3 +279,4 @@ ALTER TABLE tweets ADD IF NOT EXISTS PARTITION(date='20140716') location 's3://f
 ALTER TABLE tweets ADD IF NOT EXISTS PARTITION(date='20140717') location 's3://fredcons/fluentd/twitter/worldcup/input_combined/date=20140717';
 ALTER TABLE tweets ADD IF NOT EXISTS PARTITION(date='20140718') location 's3://fredcons/fluentd/twitter/worldcup/input_combined/date=20140718';
 
+ALTER TABLE tweets DROP IF EXISTS PARTITION(date='20140629')
