@@ -1,4 +1,5 @@
 source 'https://rubygems.org'
+gem 'commander'
 gem 'aws-sdk'
 gem 'inifile'
 gem 'terminal-table'
