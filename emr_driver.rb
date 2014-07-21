@@ -18,6 +18,14 @@ AWS.config(
 
 emr = AWS::EMR.new()
 
+HIVE_VERSION = "0.11.0.2"
+AMI_VERSION = "3.1.0"
+SCRIPT_RUNNER_JAR = "s3://elasticmapreduce/libs/script-runner/script-runner.jar"
+HIVE_SCRIPT = "s3://elasticmapreduce/libs/hive/hive-script"
+HIVE_BASE_PATH = "s3://elasticmapreduce/libs/hive/"
+PIG_SCRIPT = "s3://elasticmapreduce/libs/pig/pig-script"
+PIG_BASE_PATH = "s3://elasticmapreduce/libs/pig/"
+
  
 command :start_cluster do |c|
   c.syntax = 'emr_driver launch, [options]'
@@ -27,12 +35,29 @@ command :start_cluster do |c|
   c.option '--name NAME', 'The name of your cluster'
   c.option '--instances_count INSTANCES_COUNT', Integer, 'The number of machines'
   c.option '--instances_type INSTANCES_TYPE', 'The instance type'
+  c.option '--install_hive', 'To install hive'
+  c.option '--install_pig', 'To install pig'
+  c.option '--install_spark', 'To install spark'
   c.action do |args, options|
     options.default :name => 'my-emr-cluster', :instances_count => 2, :instances_type => 'm1.small'
+
+    steps = []
+    if options.install_pig
+      steps << install_pig_step
+    end
+    if options.install_hive
+      steps << install_hive_step
+    end
+
+    bootstrap_actions = []
+    if options.install_spark
+ 
+    end
+
     response = emr.client.run_job_flow({
       :name => options.name,
       :log_uri => 's3://fredcons/emr_logs',
-      :ami_version => '3.1.0',
+      :ami_version => AMI_VERSION,
       :instances => {
         :master_instance_type => options.instances_type,
         :slave_instance_type => options.instances_type,
@@ -40,7 +65,9 @@ command :start_cluster do |c|
         :ec2_key_name => 'fc',
         :keep_job_flow_alive_when_no_steps => true,
         :termination_protected  => true
-      }
+      },
+      :steps => steps,
+      :bootstrap_actions => bootstrap_actions
     })
     puts "Job flow #{response[:job_flow_id]} has been created"
 
@@ -117,100 +144,74 @@ command :copy_json_to_flat do |c|
   c.action do |args, options|
     emr.job_flows[options.id].add_steps([
     {
-      :name => 'install_hive',
-      :action_on_failure => 'TERMINATE_JOB_FLOW',
-      :hadoop_jar_step => {
-        :jar => 's3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-        :args => ["s3://eu-west-1.elasticmapreduce/libs/hive/hive-script", 
-                  "--base-path", 
-                  "s3://eu-west-1.elasticmapreduce/libs/hive/", 
-                  "--install-hive", 
-                  "--hive-versions", 
-                  "0.11.0.2"]        
-      }
-    }, 
-    {
-      :name => 'setup_hive',
-      :action_on_failure => 'TERMINATE_JOB_FLOW',
-      :hadoop_jar_step => {
-        :jar => 's3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-        :args => ["s3://eu-west-1.elasticmapreduce/libs/hive/hive-script", 
-                  "--base-path",
-                  "s3://eu-west-1.elasticmapreduce/libs/hive/",
-                  "--hive-versions", 
-                  "0.11.0.2",
-                  "--run-hive-script", 
-                  "--args", 
-                  "-f",
-                  "s3://fredcons/fluentd/twitter/worldcup/definitions/hive_s3_config.q"]        
-      }
-    },
-    {
       :name => 'create_hive_json_table',
       :action_on_failure => 'TERMINATE_JOB_FLOW',
       :hadoop_jar_step => {
-        :jar => 's3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-        :args => ["s3://eu-west-1.elasticmapreduce/libs/hive/hive-script", 
-                  "--base-path",
-                  "s3://eu-west-1.elasticmapreduce/libs/hive/",
-                  "--hive-versions", 
-                  "0.11.0.2",
-                  "--run-hive-script", 
-                  "--args", 
-                  "-f",
-                  "s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_json_schema.q"]        
+        :jar => SCRIPT_RUNNER_JAR,
+        :args => make_hadoop_jar_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_json_schema.q")
       }
     },
     {
       :name => 'create_hive_flat_table',
       :action_on_failure => 'TERMINATE_JOB_FLOW',
       :hadoop_jar_step => {
-        :jar => 's3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-        :args => ["s3://eu-west-1.elasticmapreduce/libs/hive/hive-script", 
-                  "--base-path",
-                  "s3://eu-west-1.elasticmapreduce/libs/hive/",
-                  "--hive-versions", 
-                  "0.11.0.2",
-                  "--run-hive-script", 
-                  "--args", 
-                  "-f",
-                  "s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_flat_schema.q"]        
+        :jar => SCRIPT_RUNNER_JAR,
+        :args => make_hadoop_jar_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_flat_schema.q")
       }
     },
-    #{
-    #  :name => 'create_hive_json_partitions',
-    #  :action_on_failure => 'TERMINATE_JOB_FLOW',
-    #  :hadoop_jar_step => {
-    #    :jar => 's3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-    #    :args => ["s3://eu-west-1.elasticmapreduce/libs/hive/hive-script",
-    #              "--base-path",
-    #              "s3://eu-west-1.elasticmapreduce/libs/hive/",
-    #              "--hive-versions", 
-    #              "0.11.0.2",
-    #              "--run-hive-script", 
-    #              "--args", 
-    #              "-f",
-    #              "s3://fredcons/fluentd/twitter/worldcup/definitions/partitions.q"]        
-    #  }
-    #},
     {
       :name => 'json_to_flat',
       :action_on_failure => 'TERMINATE_JOB_FLOW',
       :hadoop_jar_step => {
-        :jar => 's3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-        :args => ["s3://eu-west-1.elasticmapreduce/libs/hive/hive-script", 
-                  "--base-path",
-                  "s3://eu-west-1.elasticmapreduce/libs/hive/",
-                  "--hive-versions", 
-                  "0.11.0.2",
-                  "--run-hive-script", 
-                  "--args", 
-                  "-f",
-                  "s3://fredcons/fluentd/twitter/worldcup/definitions/json_to_flat.q"]        
+        :jar => SCRIPT_RUNNER_JAR,
+        :args => make_hadoop_jar_args("s3://fredcons/fluentd/twitter/worldcup/definitions/json_to_flat.q")
       }
     }
     ])
   end
+end
+
+def make_hadoop_jar_args(script_url)
+  [HIVE_SCRIPT,
+   "--base-path",
+   HIVE_BASE_PATH,
+   "--hive-versions",
+   HIVE_VERSION,
+   "--run-hive-script",
+   "--args",
+   "-f",
+   script_url]
+end
+
+def install_hive_step
+  {
+    :name => 'install_hive',
+    :action_on_failure => 'TERMINATE_JOB_FLOW',
+    :hadoop_jar_step => {
+      :jar => SCRIPT_RUNNER_JAR,
+      :args => [HIVE_SCRIPT,
+                "--base-path",
+                HIVE_BASE_PATH,
+                "--install-hive",
+                "--hive-versions",
+                HIVE_VERSION]
+    }
+  }
+end
+
+def install_pig_step
+  {
+    :name => 'install_pig',
+    :action_on_failure => 'TERMINATE_JOB_FLOW',
+    :hadoop_jar_step => {
+      :jar => SCRIPT_RUNNER_JAR,
+      :args => [PIG_SCRIPT,
+                "--base-path",
+                PIG_BASE_PATH,
+                "--install-pig"
+               ]
+    }
+  }
 end
 
 #{:step_config=>{:name=>"Setup hive", :action_on_failure=>"TERMINATE_JOB_FLOW", :hadoop_jar_step=>{:properties=>[], :jar=>"s3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar", :args=>["s3://eu-west-1.elasticmapreduce/libs/hive/hive-script", "--base-path", "s3://eu-west-1.elasticmapreduce/libs/hive/", "--install-hive", "--hive-versions", "0.11.0.2"]}}, :execution_status_detail=>{:state=>"COMPLETED", :creation_date_time=>2014-07-19 21:45:52 +0200, :start_date_time=>2014-07-19 22:04:21 +0200, :end_date_time=>2014-07-19 22:04:31 +0200}}

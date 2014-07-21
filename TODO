@@ -1,5 +1,4 @@
-- reorganiser scripts
-- utiliser constantes
 - partitionnement tweet_flat
 - boostrap spark
+- bootstrap impala
 - utilisation variables input / output / libs
