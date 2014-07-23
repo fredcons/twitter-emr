@@ -39,7 +39,7 @@ command :start_cluster do |c|
   c.option '--install_pig', 'To install pig'
   c.option '--install_spark', 'To install spark'
   c.action do |args, options|
-    options.default :name => 'my-emr-cluster', :instances_count => 2, :instances_type => 'm1.small'
+    options.default :name => 'my-emr-cluster', :instances_count => 2, :instances_type => 'm1.medium'
 
     steps = []
     if options.install_pig
