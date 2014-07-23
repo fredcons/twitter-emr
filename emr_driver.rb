@@ -35,23 +35,23 @@ command :start_cluster do |c|
   c.option '--name NAME', 'The name of your cluster'
   c.option '--instances_count INSTANCES_COUNT', Integer, 'The number of machines'
   c.option '--instances_type INSTANCES_TYPE', 'The instance type'
-  c.option '--install_hive', 'To install hive'
-  c.option '--install_pig', 'To install pig'
-  c.option '--install_spark', 'To install spark'
+  c.option '--with_hive', 'To install hive'
+  c.option '--with_pig', 'To install pig'
+  c.option '--with_spark', 'To install spark'
   c.action do |args, options|
     options.default :name => 'my-emr-cluster', :instances_count => 2, :instances_type => 'm1.medium'
 
     steps = []
-    if options.install_pig
+    if options.with_pig
       steps << install_pig_step
     end
-    if options.install_hive
+    if options.with_hive
       steps << install_hive_step
     end
 
     bootstrap_actions = []
-    if options.install_spark
- 
+    if options.with_spark
+      bootstrap_actions << {:name => "spark_bootstrap_action", :script_bootstrap_action => {:path => "s3://elasticmapreduce/samples/spark/1.0.0/install-spark-shark.rb"}}
     end
 
     response = emr.client.run_job_flow({
