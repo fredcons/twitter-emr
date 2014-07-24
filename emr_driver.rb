@@ -25,7 +25,8 @@ HIVE_SCRIPT = "s3://elasticmapreduce/libs/hive/hive-script"
 HIVE_BASE_PATH = "s3://elasticmapreduce/libs/hive/"
 PIG_SCRIPT = "s3://elasticmapreduce/libs/pig/pig-script"
 PIG_BASE_PATH = "s3://elasticmapreduce/libs/pig/"
-
+IMPALA_SCRIPT = "s3://elasticmapreduce/libs/impala/setup-impala"
+IMPALA_BASE_PATH = "s3://elasticmapreduce/libs/impala/"
  
 command :start_cluster do |c|
   c.syntax = 'emr_driver launch, [options]'
@@ -38,6 +39,7 @@ command :start_cluster do |c|
   c.option '--with_hive', 'To install hive'
   c.option '--with_pig', 'To install pig'
   c.option '--with_spark', 'To install spark'
+  c.option '--with_impala', 'To install impala'
   c.action do |args, options|
     options.default :name => 'my-emr-cluster', :instances_count => 2, :instances_type => 'm1.medium'
 
@@ -47,6 +49,9 @@ command :start_cluster do |c|
     end
     if options.with_hive
       steps << install_hive_step
+    end
+    if options.with_impala
+      steps << install_impala_step
     end
 
     bootstrap_actions = []
@@ -213,5 +218,21 @@ def install_pig_step
     }
   }
 end
+
+def install_impala_step
+  {
+    :name => 'install_impala',
+    :action_on_failure => 'TERMINATE_JOB_FLOW',
+    :hadoop_jar_step => {
+      :jar => SCRIPT_RUNNER_JAR,
+      :args => [IMPALA_SCRIPT,
+                "--base-path",
+                IMPALA_BASE_PATH,
+                "--install-impala"
+               ]
+    }
+  }
+end
+
 
 #{:step_config=>{:name=>"Setup hive", :action_on_failure=>"TERMINATE_JOB_FLOW", :hadoop_jar_step=>{:properties=>[], :jar=>"s3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar", :args=>["s3://eu-west-1.elasticmapreduce/libs/hive/hive-script", "--base-path", "s3://eu-west-1.elasticmapreduce/libs/hive/", "--install-hive", "--hive-versions", "0.11.0.2"]}}, :execution_status_detail=>{:state=>"COMPLETED", :creation_date_time=>2014-07-19 21:45:52 +0200, :start_date_time=>2014-07-19 22:04:21 +0200, :end_date_time=>2014-07-19 22:04:31 +0200}}
