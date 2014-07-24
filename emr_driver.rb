@@ -153,7 +153,7 @@ command :copy_json_to_flat do |c|
       :action_on_failure => 'TERMINATE_JOB_FLOW',
       :hadoop_jar_step => {
         :jar => SCRIPT_RUNNER_JAR,
-        :args => make_hadoop_jar_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_json_schema.q")
+        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_json_schema.q")
       }
     },
     {
@@ -161,7 +161,7 @@ command :copy_json_to_flat do |c|
       :action_on_failure => 'TERMINATE_JOB_FLOW',
       :hadoop_jar_step => {
         :jar => SCRIPT_RUNNER_JAR,
-        :args => make_hadoop_jar_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_flat_schema.q")
+        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_flat_schema.q")
       }
     },
     {
@@ -169,20 +169,30 @@ command :copy_json_to_flat do |c|
       :action_on_failure => 'TERMINATE_JOB_FLOW',
       :hadoop_jar_step => {
         :jar => SCRIPT_RUNNER_JAR,
-        :args => make_hadoop_jar_args("s3://fredcons/fluentd/twitter/worldcup/definitions/json_to_flat.q")
+        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/json_to_flat.q")
       }
     }
     ])
   end
 end
 
-def make_hadoop_jar_args(script_url)
+def make_hive_args(script_url)
   [HIVE_SCRIPT,
    "--base-path",
    HIVE_BASE_PATH,
    "--hive-versions",
    HIVE_VERSION,
    "--run-hive-script",
+   "--args",
+   "-f",
+   script_url]
+end
+
+def make_impala_args(script_url)
+  [IMPALA_SCRIPT,
+   "--base-path",
+   IMPALA_BASE_PATH,
+   "--run-impala-script",
    "--args",
    "-f",
    script_url]
