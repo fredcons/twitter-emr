@@ -29,10 +29,10 @@ IMPALA_SCRIPT = "s3://elasticmapreduce/libs/impala/setup-impala"
 IMPALA_BASE_PATH = "s3://elasticmapreduce/libs/impala/"
  
 command :start_cluster do |c|
-  c.syntax = 'emr_driver launch, [options]'
-  c.summary = ''
+  c.syntax = 'emr_driver start_cluster [options]'
+  c.summary = 'Starts a EMR cluster'
   c.description = ''
-  c.example 'description', 'command example'
+  c.example 'description', 'emr_driver start_cluster --with_hive --with_impala --instances_count 6 --name my_hive_impala_cluster'
   c.option '--name NAME', 'The name of your cluster'
   c.option '--instances_count INSTANCES_COUNT', Integer, 'The number of machines'
   c.option '--instances_type INSTANCES_TYPE', 'The instance type'
@@ -81,9 +81,9 @@ end
 
 command :stop_cluster do |c|
   c.syntax = 'emr_driver stop_cluster [options]'
-  c.summary = ''
+  c.summary = 'Stops a EMR cluster'
   c.description = ''
-  c.example 'description', 'command example'
+  c.example 'description', 'emr_driver stop_cluster --id xxx'
   c.option '--id ID', 'the cluster to stop'
   c.action do |args, options|
     job_flow = emr.job_flows[options.id] 
@@ -98,9 +98,9 @@ end
 
 command :show_cluster do |c|
   c.syntax = 'emr_driver show_cluster [options]'
-  c.summary = ''
+  c.summary = 'Shows the details of a given EMR cluster'
   c.description = ''
-  c.example 'description', 'command example'
+  c.example 'description', 'emr_driver show_cluster --id xxx'
   c.option '--id ID', 'the cluster to show'
   c.action do |args, options|
     job_flow = emr.job_flows[options.id] 
@@ -124,8 +124,8 @@ command :show_cluster do |c|
 end
 
 command :list_clusters do |c|
-  c.syntax = 'emr_driver list_clusters [options]'
-  c.summary = ''
+  c.syntax = 'emr_driver list_clusters'
+  c.summary = 'Lists all recent clusters'
   c.description = ''
   c.example 'description', 'command example'
   c.action do |args, options|
@@ -144,7 +144,7 @@ command :copy_json_to_flat do |c|
   c.syntax = 'emr_driver copy_json_to_flat [options]'
   c.summary = ''
   c.description = ''
-  c.example 'description', 'command example'
+  c.example 'description', 'emr_driver copy_json_to_flat'
   c.option '--id ID', 'the cluster to use'
   c.action do |args, options|
     emr.job_flows[options.id].add_steps([
