@@ -176,6 +176,35 @@ command :copy_json_to_flat do |c|
   end
 end
 
+command :count_tweets_by_user_with_hive do |c|
+  c.syntax = 'emr_driver count_tweets_by_user_with_hive [options]'
+  c.summary = ''
+  c.description = ''
+  c.example 'description', 'emr_driver count_tweets_by_user_with_hive'
+  c.option '--id ID', 'the cluster to use'
+  c.action do |args, options|
+    emr.job_flows[options.id].add_steps([
+    {
+      :name => 'create_hive_flat_table',
+      :action_on_failure => 'TERMINATE_JOB_FLOW',
+      :hadoop_jar_step => {
+        :jar => SCRIPT_RUNNER_JAR,
+        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_flat_schema.q")
+      }
+    },
+    {
+      :name => 'hive_count_by_username',
+      :action_on_failure => 'TERMINATE_JOB_FLOW',
+      :hadoop_jar_step => {
+        :jar => SCRIPT_RUNNER_JAR,
+        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/hive_count_by_username.q")
+      }
+    }
+    ])
+  end
+end
+
+
 def make_hive_args(script_url)
   [HIVE_SCRIPT,
    "--base-path",
