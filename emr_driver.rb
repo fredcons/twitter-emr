@@ -50,13 +50,13 @@ command :start_cluster do |c|
     if options.with_hive
       steps << install_hive_step
     end
-    if options.with_impala
-      steps << install_impala_step
-    end
 
     bootstrap_actions = []
     if options.with_spark
       bootstrap_actions << {:name => "spark_bootstrap_action", :script_bootstrap_action => {:path => "s3://elasticmapreduce/samples/spark/1.0.0/install-spark-shark.rb"}}
+    end
+    if options.with_impala
+      bootstrap_actions << {:name => "impala_bootstrap_action", :script_bootstrap_action => {:path => "s3://elasticmapreduce/libs/impala/setup-impala", :args => ["--base-path", "s3://elasticmapreduce", "--impala-version", "1.2.4"]}}
     end
 
     response = emr.client.run_job_flow({
@@ -193,8 +193,7 @@ def make_impala_args(script_url)
    "--base-path",
    IMPALA_BASE_PATH,
    "--run-impala-script",
-   "--args",
-   "-f",
+   "--impala-script",
    script_url]
 end
 
