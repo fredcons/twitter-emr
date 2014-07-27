@@ -189,7 +189,7 @@ command :count_tweets_by_user_with_hive do |c|
       :action_on_failure => 'TERMINATE_JOB_FLOW',
       :hadoop_jar_step => {
         :jar => SCRIPT_RUNNER_JAR,
-        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_flat_schema.q")
+        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_flat_schema.q", {"LOCATION" => "s3://fredcons/fluentd/twitter/worldcup/tables/tweets_flat"})
       }
     },
     {
@@ -205,8 +205,8 @@ command :count_tweets_by_user_with_hive do |c|
 end
 
 
-def make_hive_args(script_url)
-  [HIVE_SCRIPT,
+def make_hive_args(script_url, extra_args = {})
+  base_args = [HIVE_SCRIPT,
    "--base-path",
    HIVE_BASE_PATH,
    "--hive-versions",
@@ -215,6 +215,11 @@ def make_hive_args(script_url)
    "--args",
    "-f",
    script_url]
+   extra_args.each do |k, v|
+     base_args.push "-d"
+     base_args.push "#{k}=#{v}"
+   end
+   base_args
 end
 
 def make_impala_args(script_url)

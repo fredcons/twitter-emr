@@ -8,4 +8,4 @@ create external table if not exists tweets_flat (
   user_friends_count int
 ) 
 row format delimited fields terminated by ","
-location 's3://fredcons/fluentd/twitter/worldcup/tables/tweets_flat';
+location '${LOCATION}';
