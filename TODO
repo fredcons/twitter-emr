@@ -1,4 +1,3 @@
-- partitionnement tweet_flat
-- boostrap spark
-- bootstrap impala
-- utilisation variables input / output / libs
+- usage table sur count s3 hive (mutualisation avec impala)
+- table impala compressée ? 
+- lancer job spark
