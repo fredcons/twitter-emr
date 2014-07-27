@@ -1,0 +1,1 @@
+insert overwrite table count_by_username SELECT user_name, user_screen_name, COUNT(*) as total FROM tweets_flat GROUP BY user_name, user_screen_name  order by total desc limit 1000000;

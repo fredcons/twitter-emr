@@ -21,6 +21,7 @@ emr = AWS::EMR.new()
 HIVE_VERSION = "0.11.0.2"
 AMI_VERSION = "3.1.0"
 SCRIPT_RUNNER_JAR = "s3://elasticmapreduce/libs/script-runner/script-runner.jar"
+S3DISTCP_LOCAL_JAR = "/home/hadoop/lib/emr-s3distcp-1.0.jar"
 HIVE_SCRIPT = "s3://elasticmapreduce/libs/hive/hive-script"
 HIVE_BASE_PATH = "s3://elasticmapreduce/libs/hive/"
 PIG_SCRIPT = "s3://elasticmapreduce/libs/pig/pig-script"
@@ -204,6 +205,64 @@ command :count_tweets_by_user_with_hive do |c|
   end
 end
 
+command :count_tweets_by_user_with_impala do |c|
+  c.syntax = 'emr_driver count_tweets_by_user_with_impala [options]'
+  c.summary = ''
+  c.description = ''
+  c.example 'description', 'emr_driver count_tweets_by_user_with_impala'
+  c.option '--id ID', 'the cluster to use'
+  c.action do |args, options|
+    emr.job_flows[options.id].add_steps([
+    {
+      :name => 'copy_s3_to_hdfs',
+      :action_on_failure => 'TERMINATE_JOB_FLOW',
+      :hadoop_jar_step => {
+        :jar => S3DISTCP_LOCAL_JAR,
+        :args => ["--src", "s3://fredcons/fluentd/twitter/worldcup/tables/tweets_flat",
+                  "--dest", "hdfs:///local/tweets_flat",
+                  "--outputCodec", "none",
+                  "--s3Endpoint", "s3-eu-west-1.amazonaws.com"]
+      }
+    },
+    { # note we're using hive to create the table
+      :name => 'create_hive_flat_table',
+      :action_on_failure => 'TERMINATE_JOB_FLOW',
+      :hadoop_jar_step => {
+        :jar => SCRIPT_RUNNER_JAR,
+        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/twitter_flat_schema.q", {"LOCATION" => "/local/tweets_flat"})
+      }
+    },
+    { # note we're using hive to create the table
+      :name => 'create_hive_count_by_username_table',
+      :action_on_failure => 'TERMINATE_JOB_FLOW',
+      :hadoop_jar_step => {
+        :jar => SCRIPT_RUNNER_JAR,
+        :args => make_hive_args("s3://fredcons/fluentd/twitter/worldcup/definitions/count_by_username_schema.q", {"LOCATION" => "/local/count_by_username"})
+      }
+    },
+    {
+      :name => 'impala_count_by_username',
+      :action_on_failure => 'TERMINATE_JOB_FLOW',
+      :hadoop_jar_step => {
+        :jar => SCRIPT_RUNNER_JAR,
+        :args => make_impala_args("s3://fredcons/fluentd/twitter/worldcup/definitions/impala_count_by_username.q")
+      }
+    },
+    {
+      :name => 'copy_hdfs_to_s3',
+      :action_on_failure => 'TERMINATE_JOB_FLOW',
+      :hadoop_jar_step => {
+        :jar => S3DISTCP_LOCAL_JAR,
+        :args => ["--src", "hdfs:///local/count_by_username",
+                  "--dest", "s3://fredcons/fluentd/twitter/worldcup/output/impala_users_by_count",
+                  "--srcPattern", ".*_data.*",
+                  "--outputCodec", "gzip",
+                  "--s3Endpoint", "s3-eu-west-1.amazonaws.com"]
+      }
+    }
+    ])
+  end
+end
 
 def make_hive_args(script_url, extra_args = {})
   base_args = [HIVE_SCRIPT,
