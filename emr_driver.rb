@@ -73,7 +73,8 @@ command :start_cluster do |c|
         :termination_protected  => true
       },
       :steps => steps,
-      :bootstrap_actions => bootstrap_actions
+      :bootstrap_actions => bootstrap_actions,
+      :visible_to_all_users => true
     })
     puts "Job flow #{response[:job_flow_id]} has been created"
 
