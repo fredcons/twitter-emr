@@ -16,6 +16,9 @@ AWS.config(
   :region => 'eu-west-1'
 )
 
+emr_log_uri = @aws_config_file['default']['emr_log_uri']
+keypair = @aws_config_file['default']['keypair']
+
 emr = AWS::EMR.new()
 
 HIVE_VERSION = "0.11.0.2"
@@ -62,13 +65,13 @@ command :start_cluster do |c|
 
     response = emr.client.run_job_flow({
       :name => options.name,
-      :log_uri => 's3://fredcons/emr_logs',
+      :log_uri => emr_log_uri,
       :ami_version => AMI_VERSION,
       :instances => {
         :master_instance_type => options.instances_type,
         :slave_instance_type => options.instances_type,
         :instance_count => options.instances_count,
-        :ec2_key_name => 'fc',
+        :ec2_key_name => keypair,
         :keep_job_flow_alive_when_no_steps => true,
         :termination_protected  => true
       },
